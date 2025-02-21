@@ -5,16 +5,32 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h2>PromptSaver</h2>
-  <form id="promptForm">
-    <label>Input: <input type="text" id="input" placeholder="e.g., Question"></label><br>
-    <label>Content: <textarea id="content" placeholder="Prompt content"></textarea></label><br>
-    <label>Tags: <input type="text" id="tags" placeholder="e.g., work, personal"></label><br>
-    <button type="submit">Save Prompt</button>
-  </form>
-  <h3>Saved Prompts</h3>
-  <label>Filter by Tag: <input type="text" id="tagFilter" placeholder="Enter tag"></label>
-  <ul id="promptList"></ul>
+  <div class="container">
+    <h1 class="title">PromptSaver</h1>
+    <form id="promptForm">
+      <div class="input-group">
+        <label for="input">Title:</label>
+        <input type="text" id="Title" placeholder="e.g., Heading" required>
+      </div>
+      <div class="input-group">
+        <label for="content">Content:</label>
+        <textarea id="content" placeholder="Prompt content" required></textarea>
+      </div>
+      <div class="input-group">
+        <label for="tags">Tags:</label>
+        <input type="text" id="tags" placeholder="e.g., work, personal" required>
+      </div>
+      <button type="submit" class="save-btn">Save Prompt</button>
+    </form>
+    <div class="prompts-section">
+      <h2>Saved Prompts</h2>
+      <div class="filter-group">
+        <label for="tagFilter">Filter by Tag:</label>
+        <input type="text" id="tagFilter" placeholder="Enter tag">
+      </div>
+      <ul id="promptList"></ul>
+    </div>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>
