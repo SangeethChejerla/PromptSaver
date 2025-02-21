@@ -1,15 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
     loadPrompts();
     injectContentScript();
-    setupFormSubmission(); // Ensure form submission is set up correctly
+    setupNavigation();
   });
   
-  // Set up form submission with proper event handling
-  function setupFormSubmission() {
-    const form = document.getElementById('promptForm');
-    let isEditing = false;
-    let editingId = null;
+  // Set up navigation between list and form views
+  function setupNavigation() {
+    const listHeader = document.getElementById('listHeader');
+    const promptsSection = document.getElementById('promptsSection');
+    const formHeader = document.getElementById('formHeader');
+    const promptForm = document.getElementById('promptForm');
   
+    // Show form when "+" is clicked
+    document.querySelector('.add-btn').addEventListener('click', () => {
+      listHeader.style.display = 'none';
+      promptsSection.style.display = 'none';
+      formHeader.style.display = 'flex';
+      promptForm.style.display = 'block';
+      promptForm.reset(); // Clear form
+    });
+  
+    // Return to list when list icon (📋) is clicked
+    document.querySelector('.list-btn').addEventListener('click', () => {
+      formHeader.style.display = 'none';
+      promptForm.style.display = 'none';
+      listHeader.style.display = 'flex';
+      promptsSection.style.display = 'block';
+      loadPrompts(); // Refresh the list
+    });
+  }
+  
+  // Handle form submission (Save prompt)
+  function handleFormSubmission() {
+    const form = document.getElementById('promptForm');
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = document.getElementById('input').value.trim();
@@ -25,22 +48,25 @@ document.addEventListener('DOMContentLoaded', () => {
         input,
         content,
         tags,
-        id: isEditing ? editingId : Date.now()
+        id: Date.now()
       };
   
       chrome.storage.local.get(['prompts'], (result) => {
-        let prompts = result.prompts || [];
-        if (isEditing) {
-          const index = prompts.findIndex(p => p.id === editingId);
-          if (index !== -1) prompts[index] = prompt;
-        } else {
-          prompts.push(prompt);
-        }
+        const prompts = result.prompts || [];
+        prompts.push(prompt);
         chrome.storage.local.set({ prompts }, () => {
+          // After saving, show only the list
+          const listHeader = document.getElementById('listHeader');
+          const promptsSection = document.getElementById('promptsSection');
+          const formHeader = document.getElementById('formHeader');
+          const promptForm = document.getElementById('promptForm');
+  
+          formHeader.style.display = 'none';
+          promptForm.style.display = 'none';
+          listHeader.style.display = 'flex';
+          promptsSection.style.display = 'block';
           loadPrompts();
           form.reset();
-          isEditing = false;
-          editingId = null;
         });
       });
     });
@@ -131,10 +157,20 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('input').value = prompt.input;
     document.getElementById('content').value = prompt.content;
     document.getElementById('tags').value = prompt.tags.join(', ');
-    
+  
+    // Show the form and hide the list
+    const listHeader = document.getElementById('listHeader');
+    const promptsSection = document.getElementById('promptsSection');
+    const formHeader = document.getElementById('formHeader');
+    const promptForm = document.getElementById('promptForm');
+  
+    listHeader.style.display = 'none';
+    promptsSection.style.display = 'none';
+    formHeader.style.display = 'flex';
+    promptForm.style.display = 'block';
+  
     // Set editing state
-    const form = document.getElementById('promptForm');
-    form.dataset.editingId = prompt.id; // Store the ID in the form's dataset
+    promptForm.dataset.editingId = prompt.id;
   }
   
   // Delete a prompt
