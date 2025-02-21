@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPrompts();
     injectContentScript();
     setupNavigation();
+    setupFormSubmission(); // Ensure form submission is set up correctly
   });
   
   // Set up navigation between list and form views
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
       formHeader.style.display = 'flex';
       promptForm.style.display = 'block';
       promptForm.reset(); // Clear form
+      promptForm.dataset.editingId = ''; // Clear editing state
     });
   
     // Return to list when list icon (📋) is clicked
@@ -30,9 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Handle form submission (Save prompt)
-  function handleFormSubmission() {
+  // Set up form submission for saving prompts
+  function setupFormSubmission() {
     const form = document.getElementById('promptForm');
+  
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const input = document.getElementById('input').value.trim();
@@ -48,13 +51,23 @@ document.addEventListener('DOMContentLoaded', () => {
         input,
         content,
         tags,
-        id: Date.now()
+        id: form.dataset.editingId ? parseInt(form.dataset.editingId) : Date.now()
       };
   
       chrome.storage.local.get(['prompts'], (result) => {
-        const prompts = result.prompts || [];
-        prompts.push(prompt);
+        let prompts = result.prompts || [];
+        if (form.dataset.editingId) {
+          // Update existing prompt
+          const index = prompts.findIndex(p => p.id === parseInt(form.dataset.editingId));
+          if (index !== -1) {
+            prompts[index] = prompt;
+          }
+        } else {
+          // Add new prompt
+          prompts.push(prompt);
+        }
         chrome.storage.local.set({ prompts }, () => {
+          console.log('Prompt saved successfully:', prompt);
           // After saving, show only the list
           const listHeader = document.getElementById('listHeader');
           const promptsSection = document.getElementById('promptsSection');
@@ -67,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
           promptsSection.style.display = 'block';
           loadPrompts();
           form.reset();
+          form.dataset.editingId = ''; // Clear editing state
         });
       });
     });
