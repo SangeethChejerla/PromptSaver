@@ -2,37 +2,35 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPrompts();
     injectContentScript();
     setupNavigation();
-    setupFormSubmission(); // Ensure form submission is set up correctly
+    setupFormSubmission();
   });
   
-  // Set up navigation between list and form views
+  // Navigation between list and form views
   function setupNavigation() {
     const listHeader = document.getElementById('listHeader');
     const promptsSection = document.getElementById('promptsSection');
     const formHeader = document.getElementById('formHeader');
     const promptForm = document.getElementById('promptForm');
   
-    // Show form when "+" is clicked
     document.querySelector('.add-btn').addEventListener('click', () => {
       listHeader.style.display = 'none';
       promptsSection.style.display = 'none';
       formHeader.style.display = 'flex';
       promptForm.style.display = 'block';
-      promptForm.reset(); // Clear form
-      promptForm.dataset.editingId = ''; // Clear editing state
+      promptForm.reset();
+      promptForm.dataset.editingId = '';
     });
   
-    // Return to list when list icon (📋) is clicked
     document.querySelector('.list-btn').addEventListener('click', () => {
       formHeader.style.display = 'none';
       promptForm.style.display = 'none';
       listHeader.style.display = 'flex';
       promptsSection.style.display = 'block';
-      loadPrompts(); // Refresh the list
+      loadPrompts();
     });
   }
   
-  // Set up form submission for saving prompts
+  // Form submission for saving prompts
   function setupFormSubmission() {
     const form = document.getElementById('promptForm');
   
@@ -57,41 +55,30 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.local.get(['prompts'], (result) => {
         let prompts = result.prompts || [];
         if (form.dataset.editingId) {
-          // Update existing prompt
           const index = prompts.findIndex(p => p.id === parseInt(form.dataset.editingId));
-          if (index !== -1) {
-            prompts[index] = prompt;
-          }
+          if (index !== -1) prompts[index] = prompt;
         } else {
-          // Add new prompt
           prompts.push(prompt);
         }
         chrome.storage.local.set({ prompts }, () => {
-          console.log('Prompt saved successfully:', prompt);
-          // After saving, show only the list
-          const listHeader = document.getElementById('listHeader');
-          const promptsSection = document.getElementById('promptsSection');
-          const formHeader = document.getElementById('formHeader');
-          const promptForm = document.getElementById('promptForm');
-  
+          console.log('Prompt saved:', prompt);
           formHeader.style.display = 'none';
           promptForm.style.display = 'none';
           listHeader.style.display = 'flex';
           promptsSection.style.display = 'block';
           loadPrompts();
           form.reset();
-          form.dataset.editingId = ''; // Clear editing state
+          form.dataset.editingId = '';
         });
       });
     });
   }
   
-  // Load and display saved prompts
+  // Load and display prompts
   function loadPrompts() {
     chrome.storage.local.get(['prompts'], (result) => {
       const prompts = result.prompts || [];
       filterAndDisplayPrompts(prompts);
-      enableDragAndDrop();
     });
   }
   
@@ -107,18 +94,26 @@ document.addEventListener('DOMContentLoaded', () => {
         <em>Tags: ${prompt.tags.join(', ')}</em>
       </div>
       <div class="actions">
-        <button class="action-btn copy-btn" data-id="${prompt.id}">Copy</button>
-        <button class="action-btn edit-btn" data-id="${prompt.id}">Edit</button>
-        <button class="action-btn delete-btn" data-id="${prompt.id}">Delete</button>
+        <button class="action-btn copy-btn" data-id="${prompt.id}">📋 Copy</button>
+        <button class="action-btn edit-btn" data-id="${prompt.id}">✏️ Edit</button>
+        <button class="action-btn delete-btn" data-id="${prompt.id}">🗑️ Delete</button>
       </div>
     `;
     document.getElementById('promptList').appendChild(li);
   
-    // Add expand/collapse toggle
-    const contentDiv = li.querySelector('.prompt-content');
-    contentDiv.addEventListener('click', () => toggleExpand(contentDiv));
+    // Drag feedback
+    li.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      const draggedItem = document.querySelector('.dragging');
+      if (li !== draggedItem) li.classList.add('drag-over');
+    });
+    li.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      li.classList.remove('drag-over');
+    });
   
-    // Add button event listeners
+    // Other event listeners
+    li.querySelector('.prompt-content').addEventListener('click', () => toggleExpand(li.querySelector('.prompt-content')));
     li.querySelector('.copy-btn').addEventListener('click', () => copyPrompt(prompt));
     li.querySelector('.edit-btn').addEventListener('click', () => editPrompt(prompt));
     li.querySelector('.delete-btn').addEventListener('click', () => deletePrompt(prompt.id));
@@ -132,8 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let word of words) {
       if (lineCount >= lines * 10) break; // Approx 10 words per line
       truncated += word + ' ';
-      if (word.length > 10) lineCount++;
-      else lineCount += 0.5; // Approx word count per line
+      lineCount += word.length > 10 ? 1 : 0.5;
     }
     return truncated.trim() + (truncated.length < content.length ? '...' : '');
   }
@@ -158,11 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Copy prompt to clipboard
+  // Copy only content to clipboard
   function copyPrompt(prompt) {
-    const text = `${prompt.input}\n${prompt.content}\nTags: ${prompt.tags.join(', ')}`;
-    navigator.clipboard.writeText(text).then(() => {
-      alert('Prompt copied to clipboard!');
+    navigator.clipboard.writeText(prompt.content).then(() => {
+      alert('Prompt content copied to clipboard!');
     }).catch(err => console.error('Failed to copy:', err));
   }
   
@@ -172,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('content').value = prompt.content;
     document.getElementById('tags').value = prompt.tags.join(', ');
   
-    // Show the form and hide the list
     const listHeader = document.getElementById('listHeader');
     const promptsSection = document.getElementById('promptsSection');
     const formHeader = document.getElementById('formHeader');
@@ -182,8 +174,6 @@ document.addEventListener('DOMContentLoaded', () => {
     promptsSection.style.display = 'none';
     formHeader.style.display = 'flex';
     promptForm.style.display = 'block';
-  
-    // Set editing state
     promptForm.dataset.editingId = prompt.id;
   }
   
@@ -206,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  // Filter and display prompts based on tag
+  // Filter and display prompts
   function filterAndDisplayPrompts(prompts, filterTag = '') {
     const list = document.getElementById('promptList');
     list.innerHTML = '';
@@ -217,23 +207,27 @@ document.addEventListener('DOMContentLoaded', () => {
     enableDragAndDrop();
   }
   
-  // Drag-and-drop for reordering and dragging to webpage
+  // Drag-and-drop functionality
   function enableDragAndDrop() {
     const list = document.getElementById('promptList');
-    let draggedItem = null;
   
     list.addEventListener('dragstart', (e) => {
-      draggedItem = e.target.closest('li');
+      const draggedItem = e.target.closest('li');
       if (draggedItem) {
-        e.target.classList.add('dragging');
-        const textContent = `${draggedItem.querySelector('strong').textContent}\n${draggedItem.querySelector('.prompt-content').dataset.fullContent}\n${draggedItem.querySelector('em').textContent}`;
-        e.dataTransfer.setData('text/plain', textContent);
+        draggedItem.classList.add('dragging');
+        const content = draggedItem.querySelector('.prompt-content').dataset.fullContent;
+        e.dataTransfer.setData('text/plain', content);
       }
     });
   
     list.addEventListener('dragend', (e) => {
-      e.target.classList.remove('dragging');
-      saveNewOrder();
+      const dragged = e.target.closest('li');
+      if (dragged) {
+        dragged.classList.remove('dragging');
+        const allItems = [...list.querySelectorAll('li')];
+        allItems.forEach(item => item.classList.remove('drag-over'));
+        saveNewOrder();
+      }
     });
   
     list.addEventListener('dragover', (e) => {
@@ -242,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
     list.addEventListener('drop', (e) => {
       e.preventDefault();
+      const draggedItem = document.querySelector('.dragging');
       const target = e.target.closest('li');
       if (target && draggedItem !== target) {
         const allItems = [...list.querySelectorAll('li')];
@@ -252,11 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           target.before(draggedItem);
         }
+        allItems.forEach(item => item.classList.remove('drag-over'));
+        saveNewOrder();
       }
     });
   }
   
-  // Save the new order after dragging
+  // Save new order after dragging
   function saveNewOrder() {
     const list = document.getElementById('promptList');
     const items = [...list.querySelectorAll('li')];
@@ -268,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  // Inject content script into the active tab
+  // Inject content script
   function injectContentScript() {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.scripting.executeScript({

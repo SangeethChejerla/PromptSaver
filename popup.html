@@ -3,10 +3,11 @@
 <head>
   <title>PromptSaver</title>
   <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="container">
-    <!-- Default view: List of prompts with "+" button -->
+    <!-- List View -->
     <div class="header" id="listHeader">
       <h1 class="title">PromptSaver</h1>
       <button class="action-btn add-btn">+</button>
@@ -14,14 +15,17 @@
     <div class="prompts-section" id="promptsSection">
       <div class="filter-group">
         <label for="tagFilter">Filter by Tag:</label>
-        <input type="text" id="tagFilter" placeholder="Enter tag">
+        <div class="search-wrapper">
+          <input type="text" id="tagFilter" placeholder="Enter tag">
+          <span class="search-icon">🔍</span>
+        </div>
       </div>
       <ul id="promptList"></ul>
     </div>
 
-    <!-- Form view with list icon -->
+    <!-- Form View -->
     <div class="header" id="formHeader" style="display: none;">
-      <button class="action-btn list-btn">📋</button>
+      <button class="action-btn list-btn">← List</button>
       <h1 class="title">Create New Prompt</h1>
     </div>
     <form id="promptForm" style="display: none;">
