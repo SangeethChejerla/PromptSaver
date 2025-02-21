@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PromptSaver</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <h2>PromptSaver</h2>
+  <form id="promptForm">
+    <label>Input: <input type="text" id="input" placeholder="e.g., Question"></label><br>
+    <label>Content: <textarea id="content" placeholder="Prompt content"></textarea></label><br>
+    <label>Tags: <input type="text" id="tags" placeholder="e.g., work, personal"></label><br>
+    <button type="submit">Save Prompt</button>
+  </form>
+  <h3>Saved Prompts</h3>
+  <label>Filter by Tag: <input type="text" id="tagFilter" placeholder="Enter tag"></label>
+  <ul id="promptList"></ul>
+  <script src="popup.js"></script>
+</body>
+</html>
