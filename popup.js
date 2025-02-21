@@ -1,4 +1,3 @@
-// Inject content script when popup loads and load prompts
 document.addEventListener('DOMContentLoaded', () => {
     loadPrompts();
     injectContentScript();
@@ -18,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
       prompts.push(prompt);
       chrome.storage.local.set({ prompts }, () => {
         addPromptToList(prompt);
-        e.target.reset(); // Clear form
+        e.target.reset();
       });
     });
   });
@@ -38,17 +37,100 @@ document.addEventListener('DOMContentLoaded', () => {
     li.draggable = true;
     li.dataset.id = prompt.id;
     li.innerHTML = `
-      <div>
+      <div class="prompt-content" data-full-content="${prompt.content}">
         <strong>${prompt.input}</strong><br>
-        ${prompt.content}<br>
+        ${truncateContent(prompt.content, 3)}<br>
         <em>Tags: ${prompt.tags.join(', ')}</em>
       </div>
-      <button class="delete-btn" data-id="${prompt.id}">Delete</button>
+      <div class="actions">
+        <button class="action-btn copy-btn" data-id="${prompt.id}">Copy</button>
+        <button class="action-btn edit-btn" data-id="${prompt.id}">Edit</button>
+        <button class="action-btn delete-btn" data-id="${prompt.id}">Delete</button>
+      </div>
     `;
     document.getElementById('promptList').appendChild(li);
   
-    // Delete button event
+    // Add expand/collapse toggle
+    const contentDiv = li.querySelector('.prompt-content');
+    contentDiv.addEventListener('click', () => toggleExpand(contentDiv));
+  
+    // Add button event listeners
+    li.querySelector('.copy-btn').addEventListener('click', () => copyPrompt(prompt));
+    li.querySelector('.edit-btn').addEventListener('click', () => editPrompt(prompt, li));
     li.querySelector('.delete-btn').addEventListener('click', () => deletePrompt(prompt.id));
+  }
+  
+  // Truncate content to 3 lines
+  function truncateContent(content, lines) {
+    const words = content.split(' ');
+    let truncated = '';
+    let lineCount = 0;
+    for (let word of words) {
+      if (lineCount >= lines * 10) break; // Approx 10 words per line
+      truncated += word + ' ';
+      if (word.length > 10) lineCount++; // Long words count as a line
+      else lineCount += 0.5; // Approx word count per line
+    }
+    return truncated.trim() + (truncated.length < content.length ? '...' : '');
+  }
+  
+  // Toggle expand/collapse of prompt content
+  function toggleExpand(contentDiv) {
+    contentDiv.classList.toggle('expanded');
+    if (contentDiv.classList.contains('expanded')) {
+      contentDiv.innerHTML = `
+        <strong>${contentDiv.querySelector('strong').textContent}</strong><br>
+        ${contentDiv.dataset.fullContent}<br>
+        <em>${contentDiv.querySelector('em').textContent}</em>
+      `;
+    } else {
+      const input = contentDiv.querySelector('strong').textContent;
+      const tags = contentDiv.querySelector('em').textContent;
+      contentDiv.innerHTML = `
+        <strong>${input}</strong><br>
+        ${truncateContent(contentDiv.dataset.fullContent, 3)}<br>
+        <em>${tags}</em>
+      `;
+    }
+  }
+  
+  // Copy prompt to clipboard
+  function copyPrompt(prompt) {
+    const text = `${prompt.input}\n${prompt.content}\nTags: ${prompt.tags.join(', ')}`;
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Prompt copied to clipboard!');
+    }).catch(err => console.error('Failed to copy:', err));
+  }
+  
+  // Edit a prompt
+  function editPrompt(prompt, li) {
+    const newInput = prompt(input => input, prompt.input);
+    const newContent = prompt(content => content, prompt.content);
+    const newTags = prompt(tags => tags.join(', '), prompt.tags.join(', '));
+  
+    document.getElementById('input').value = newInput;
+    document.getElementById('content').value = newContent;
+    document.getElementById('tags').value = newTags;
+  
+    deletePrompt(prompt.id); // Remove old prompt
+    document.getElementById('promptForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const updatedPrompt = {
+        input: document.getElementById('input').value,
+        content: document.getElementById('content').value,
+        tags: document.getElementById('tags').value.split(',').map(tag => tag.trim()),
+        id: prompt.id
+      };
+      chrome.storage.local.get(['prompts'], (result) => {
+        const prompts = result.prompts || [];
+        const index = prompts.findIndex(p => p.id === prompt.id);
+        if (index !== -1) prompts[index] = updatedPrompt;
+        chrome.storage.local.set({ prompts }, () => {
+          addPromptToList(updatedPrompt);
+          e.target.reset();
+        });
+      });
+    }, { once: true });
   }
   
   // Delete a prompt
@@ -76,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ? prompts.filter(p => p.tags.some(tag => tag.toLowerCase().includes(filterTag)))
       : prompts;
     filteredPrompts.forEach(prompt => addPromptToList(prompt));
-    enableDragAndDrop(); // Re-enable drag-and-drop after filtering
+    enableDragAndDrop();
   }
   
   // Drag-and-drop for reordering and dragging to webpage
@@ -88,8 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
       draggedItem = e.target.closest('li');
       if (draggedItem) {
         e.target.classList.add('dragging');
-        // Set data for dragging to webpage (input + content + tags)
-        const textContent = `${draggedItem.querySelector('strong').textContent}\n${draggedItem.querySelector('div').childNodes[2].textContent}\n${draggedItem.querySelector('em').textContent}`;
+        const textContent = `${draggedItem.querySelector('strong').textContent}\n${draggedItem.querySelector('.prompt-content').dataset.fullContent}\n${draggedItem.querySelector('em').textContent}`;
         e.dataTransfer.setData('text/plain', textContent);
       }
     });
