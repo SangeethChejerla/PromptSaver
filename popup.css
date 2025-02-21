@@ -1,0 +1,32 @@
+body {
+    width: 300px;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+  }
+  input, textarea {
+    width: 100%;
+    margin: 5px 0;
+  }
+  #promptList {
+    list-style: none;
+    padding: 0;
+  }
+  #promptList li {
+    padding: 10px;
+    margin: 5px 0;
+    background: #f0f0f0;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #promptList li.dragging {
+    opacity: 0.5;
+  }
+  .delete-btn {
+    background: #ff4444;
+    color: white;
+    border: none;
+    padding: 2px 5px;
+    cursor: pointer;
+  }
