@@ -1,26 +1,50 @@
 document.addEventListener('DOMContentLoaded', () => {
     loadPrompts();
     injectContentScript();
+    setupFormSubmission(); // Ensure form submission is set up correctly
   });
   
-  // Save new prompt
-  document.getElementById('promptForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const prompt = {
-      input: document.getElementById('input').value,
-      content: document.getElementById('content').value,
-      tags: document.getElementById('tags').value.split(',').map(tag => tag.trim()),
-      id: Date.now()
-    };
-    chrome.storage.local.get(['prompts'], (result) => {
-      const prompts = result.prompts || [];
-      prompts.push(prompt);
-      chrome.storage.local.set({ prompts }, () => {
-        addPromptToList(prompt);
-        e.target.reset();
+  // Set up form submission with proper event handling
+  function setupFormSubmission() {
+    const form = document.getElementById('promptForm');
+    let isEditing = false;
+    let editingId = null;
+  
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('input').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const tags = document.getElementById('tags').value.trim().split(',').map(tag => tag.trim()).filter(tag => tag);
+  
+      if (!input || !content || !tags.length) {
+        alert('Please fill in all fields (Input, Content, and at least one Tag).');
+        return;
+      }
+  
+      const prompt = {
+        input,
+        content,
+        tags,
+        id: isEditing ? editingId : Date.now()
+      };
+  
+      chrome.storage.local.get(['prompts'], (result) => {
+        let prompts = result.prompts || [];
+        if (isEditing) {
+          const index = prompts.findIndex(p => p.id === editingId);
+          if (index !== -1) prompts[index] = prompt;
+        } else {
+          prompts.push(prompt);
+        }
+        chrome.storage.local.set({ prompts }, () => {
+          loadPrompts();
+          form.reset();
+          isEditing = false;
+          editingId = null;
+        });
       });
     });
-  });
+  }
   
   // Load and display saved prompts
   function loadPrompts() {
@@ -56,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
     // Add button event listeners
     li.querySelector('.copy-btn').addEventListener('click', () => copyPrompt(prompt));
-    li.querySelector('.edit-btn').addEventListener('click', () => editPrompt(prompt, li));
+    li.querySelector('.edit-btn').addEventListener('click', () => editPrompt(prompt));
     li.querySelector('.delete-btn').addEventListener('click', () => deletePrompt(prompt.id));
   }
   
@@ -68,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let word of words) {
       if (lineCount >= lines * 10) break; // Approx 10 words per line
       truncated += word + ' ';
-      if (word.length > 10) lineCount++; // Long words count as a line
+      if (word.length > 10) lineCount++;
       else lineCount += 0.5; // Approx word count per line
     }
     return truncated.trim() + (truncated.length < content.length ? '...' : '');
@@ -103,42 +127,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Edit a prompt
-  function editPrompt(prompt, li) {
-    const newInput = prompt(input => input, prompt.input);
-    const newContent = prompt(content => content, prompt.content);
-    const newTags = prompt(tags => tags.join(', '), prompt.tags.join(', '));
-  
-    document.getElementById('input').value = newInput;
-    document.getElementById('content').value = newContent;
-    document.getElementById('tags').value = newTags;
-  
-    deletePrompt(prompt.id); // Remove old prompt
-    document.getElementById('promptForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const updatedPrompt = {
-        input: document.getElementById('input').value,
-        content: document.getElementById('content').value,
-        tags: document.getElementById('tags').value.split(',').map(tag => tag.trim()),
-        id: prompt.id
-      };
-      chrome.storage.local.get(['prompts'], (result) => {
-        const prompts = result.prompts || [];
-        const index = prompts.findIndex(p => p.id === prompt.id);
-        if (index !== -1) prompts[index] = updatedPrompt;
-        chrome.storage.local.set({ prompts }, () => {
-          addPromptToList(updatedPrompt);
-          e.target.reset();
-        });
-      });
-    }, { once: true });
+  function editPrompt(prompt) {
+    document.getElementById('input').value = prompt.input;
+    document.getElementById('content').value = prompt.content;
+    document.getElementById('tags').value = prompt.tags.join(', ');
+    
+    // Set editing state
+    const form = document.getElementById('promptForm');
+    form.dataset.editingId = prompt.id; // Store the ID in the form's dataset
   }
   
   // Delete a prompt
   function deletePrompt(id) {
-    chrome.storage.local.get(['prompts'], (result) => {
-      const prompts = (result.prompts || []).filter(p => p.id !== id);
-      chrome.storage.local.set({ prompts }, loadPrompts);
-    });
+    if (confirm('Are you sure you want to delete this prompt?')) {
+      chrome.storage.local.get(['prompts'], (result) => {
+        const prompts = (result.prompts || []).filter(p => p.id !== id);
+        chrome.storage.local.set({ prompts }, loadPrompts);
+      });
+    }
   }
   
   // Filter prompts by tag
